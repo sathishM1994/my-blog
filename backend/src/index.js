@@ -18,7 +18,16 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  const server = new ApolloServer({ typeDefs, resolvers });
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    formatError: (formattedError, error) => {
+      if (!formattedError.extensions?.code) {
+        console.error(error);
+      }
+      return formattedError;
+    },
+  });
   await server.start();
 
   app.use('/graphql', expressMiddleware(server));
@@ -31,6 +40,14 @@ async function startServer() {
     console.log(`Server ready at http://localhost:${PORT}/graphql`);
   });
 }
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:', err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+});
 
 startServer().catch((err) => {
   console.error('Failed to start server:', err);

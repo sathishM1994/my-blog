@@ -4,7 +4,7 @@ import { ADD_POST, GET_POSTS } from '../graphql/queries';
 
 const initialState = { title: '', content: '', author: '' };
 
-function PostForm() {
+function PostForm({ onSuccess }) {
   const [form, setForm] = useState(initialState);
   const [formError, setFormError] = useState('');
 
@@ -14,6 +14,7 @@ function PostForm() {
     onCompleted: () => {
       setForm(initialState);
       setFormError('');
+      onSuccess?.();
     },
     onError: (err) => {
       setFormError(err.message);

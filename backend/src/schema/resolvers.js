@@ -1,13 +1,37 @@
 const { GraphQLError } = require('graphql');
 const Post = require('../models/Post');
 
+function handleMongooseError(err) {
+  if (err.name === 'ValidationError') {
+    throw new GraphQLError(err.message, { extensions: { code: 'Invalid user' } });
+  }
+  if (err.name === 'CastError') {
+    throw new GraphQLError(`Invalid id: ${err.value}`, { extensions: { code: 'Invalid id' } });
+  }
+  throw err;
+}
+
 const resolvers = {
   Query: {
     posts: async () => {
-      return Post.find().sort({ createdAt: -1 });
+      try {
+        return await Post.find().sort({ createdAt: -1 });
+      } catch (err) {
+        handleMongooseError(err);
+      }
     },
     post: async (_parent, { id }) => {
-      return Post.findById(id);
+      let post;
+      try {
+        post = await Post.findById(id);
+      } catch (err) {
+        handleMongooseError(err);
+      }
+
+      if (!post) {
+        throw new GraphQLError('Post not found', { extensions: { code: 'User Not Found' } });
+      }
+      return post;
     },
   },
   Mutation: {
@@ -16,16 +40,24 @@ const resolvers = {
 
       if (!title.trim() || !content.trim()) {
         throw new GraphQLError('Title and content cannot be empty', {
-          extensions: { code: 'BAD_USER_INPUT' },
+          extensions: { code: 'User input not available' },
         });
       }
 
-      const post = new Post({ title, content, author });
-      return post.save();
+      try {
+        const post = new Post({ title, content, author });
+        return await post.save();
+      } catch (err) {
+        handleMongooseError(err);
+      }
     },
     deletePost: async (_parent, { id }) => {
-      const result = await Post.findByIdAndDelete(id);
-      return Boolean(result);
+      try {
+        const result = await Post.findByIdAndDelete(id);
+        return Boolean(result);
+      } catch (err) {
+        handleMongooseError(err);
+      }
     },
   },
   Post: {
